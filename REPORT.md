@@ -3,7 +3,7 @@
 ## 1. Overview
 
 - **Goal:** Support SDG 3 (Good Health and Well‑Being) by enabling early detection of abnormal vital signs through an AI-powered dashboard.
-- **Scope:** Simulated wearable telemetry feeds an anomaly detection engine built with unsupervised machine learning. Results are visualized in a Streamlit web application to support clinicians, caregivers, or researchers.
+- **Scope:** Simulated wearable telemetry and live Fitbit API data feed anomaly detection engines (unsupervised and supervised). Results are visualized in a Streamlit web application to support clinicians, caregivers, or researchers.
 - **Team Focus:** Software engineering best practices including modular design, integration testing, containerization, and ethical considerations.
 
 ## 2. Problem Statement & SDG Alignment
@@ -15,28 +15,19 @@
 ## 3. Technical Solution
 
 - **Data Simulation:** Synthetic sensor readings for multiple users with injectable anomaly rates allow rapid experimentation without privacy risks.
-- **Preprocessing:** Numeric encoding, scaling, and modular pipelines enable rapid substitution of models or features.
-- **Model:** Isolation Forest (unsupervised) detects outliers without requiring extensive labelled datasets. Hyperparameters (e.g., contamination) are configurable through the UI.
+- **Wearable Ingestion:** OAuth-enabled Fitbit connector pulls heart-rate, sleep, and activity summaries into the unified schema with automated normalization and anomaly labelling heuristics.
+- **Preprocessing:** Numeric encoding, missing-value remediation, and scaling pipelines enable rapid substitution of models or features across heterogeneous data sources.
+- **Model:** Isolation Forest (unsupervised) detects outliers without requiring extensive labelled datasets, while a Random Forest classifier supports supervised anomaly detection when labels are present. Hyperparameters are configurable through the UI.
 - **Visualization:** Streamlit dashboard surfaces anomalies, evaluation metrics, and time-series plots to aid interpretation.
 
 ## 4. Architecture Overview
 
 1. `simulate_health_data` generates time-series telemetry with ground-truth anomaly labels.
-2. `preprocess_data` standardizes features for the model.
-3. `detect_anomalies` fits and applies an Isolation Forest to detect outliers.
-4. Results feed into evaluation (classification report, confusion matrix) and visualizations.
-5. Streamlit exports the enriched dataset for downstream review.
-
-
-```startLine:endLine:index.py
-def simulate_health_data(
-    num_users=5,
-    minutes=500,
-    anomaly_ratio=0.05,
-    seed=42,
-):
-// ... existing code ...
-```
+2. `load_fitbit_dataframe` authenticates with Fitbit, retrieves intraday telemetry, and maps it onto the shared feature schema.
+3. `preprocess_data` standardizes features for the selected model.
+4. Detection pipelines (`run_isolation_forest_pipeline`, `run_random_forest_pipeline`) produce anomaly labels and diagnostics.
+5. Results feed into evaluation (classification report, confusion matrix) and visualizations.
+6. Streamlit exports the enriched dataset for downstream review.
 
 ## 5. Testing Strategy
 
@@ -63,7 +54,7 @@ def simulate_health_data(
 ## 8. Future Work
 
 - Integrate LSTM forecasting for trend analysis and predictive alerts.
-- Ingest real wearable APIs (e.g., Fitbit, Apple HealthKit) with consented data.
+- Extend ingestion to additional sources (e.g., Apple HealthKit, PhysioNet) with automated schema validation.
 - Add role-based dashboards for clinicians vs. patients.
 - Automate CI/CD pipelines to rebuild and redeploy the container on every main-branch update.
 

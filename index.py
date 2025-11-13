@@ -10,12 +10,24 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import classification_report, confusion_matrix
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
+from typing import Any, Dict, List, Optional, Tuple
+import os
+
+from data_sources.fitbit_client import (
+    FitbitClient,
+    FitbitClientError,
+    FitbitCredentials,
+    FitbitToken,
+)
 
 ANOMALY_LABEL = "anomaly_label"
 UNSUPERVISED_MODEL_LABEL = "Isolation Forest (unsupervised)"
 SUPERVISED_MODEL_LABEL = "Random Forest (supervised)"
 MODEL_OPTIONS = [UNSUPERVISED_MODEL_LABEL, SUPERVISED_MODEL_LABEL]
+DATA_SOURCE_SIMULATED = "Simulated data"
+DATA_SOURCE_FITBIT = "Fitbit API"
+DATA_SOURCE_OPTIONS = [DATA_SOURCE_SIMULATED, DATA_SOURCE_FITBIT]
 
 # ---------------------------
 # SECTION 1: Data Simulation
@@ -70,7 +82,28 @@ def simulate_health_data(
 # -----------------------------
 def preprocess_data(df):
     df = df.copy()
-    df["activity_level"] = df["activity_level"].map({"low": 0, "moderate": 1, "high": 2})
+    required_columns = {
+        "heart_rate": np.nan,
+        "blood_oxygen": np.nan,
+        "temperature": np.nan,
+        "respiration_rate": np.nan,
+        "activity_level": "moderate",
+    }
+    for column, default in required_columns.items():
+        if column not in df.columns:
+            df[column] = default
+
+    df["activity_level_label"] = df["activity_level"]
+    df["activity_level"] = (
+        df["activity_level"].map({"low": 0, "moderate": 1, "high": 2}).fillna(1)
+    )
+
+    numeric_features = ["heart_rate", "blood_oxygen", "temperature", "respiration_rate"]
+    df[numeric_features] = df[numeric_features].apply(pd.to_numeric, errors="coerce")
+
+    df[numeric_features] = df[numeric_features].ffill().bfill()
+    df[numeric_features] = df[numeric_features].fillna(df[numeric_features].mean())
+
     features = [
         "heart_rate",
         "blood_oxygen",
@@ -160,6 +193,78 @@ def evaluate_model(y_true, y_pred):
 # -----------------------------
 # SECTION 5: Streamlit UI
 # -----------------------------
+def classify_activity_level_from_hr(heart_rate: float, resting_rate: Optional[float] = None) -> str:
+    if pd.isna(heart_rate):
+        return "moderate"
+    baseline = resting_rate or 65
+    if heart_rate <= baseline + 10:
+        return "low"
+    if heart_rate <= baseline + 30:
+        return "moderate"
+    return "high"
+
+
+def build_fitbit_dataframe(
+    dataset: List[Dict[str, Any]],
+    user_id: str,
+    resting_rate: Optional[float] = None,
+) -> pd.DataFrame:
+    if not dataset:
+        return pd.DataFrame()
+
+    df = pd.DataFrame(dataset)
+    df.rename(columns={"value": "heart_rate"}, inplace=True)
+    df["timestamp"] = pd.to_datetime(df["datetime"], errors="coerce")
+    df["user_id"] = user_id or "fitbit_user"
+    df["blood_oxygen"] = np.nan
+    df["temperature"] = np.nan
+    df["respiration_rate"] = 16
+
+    df["activity_level"] = df["heart_rate"].apply(
+        lambda hr: classify_activity_level_from_hr(hr, resting_rate)
+    )
+    df[ANOMALY_LABEL] = df["heart_rate"].apply(
+        lambda hr: 1 if (pd.notna(hr) and (hr < 50 or hr > 120)) else 0
+    )
+
+    columns = [
+        "user_id",
+        "timestamp",
+        "heart_rate",
+        "blood_oxygen",
+        "temperature",
+        "respiration_rate",
+        "activity_level",
+        ANOMALY_LABEL,
+    ]
+    df = df[columns].dropna(subset=["timestamp", "heart_rate"])
+    df.sort_values("timestamp", inplace=True)
+    return df.reset_index(drop=True)
+
+
+def load_fitbit_dataframe(
+    credentials: FitbitCredentials,
+    stored_token: Optional[Dict[str, Any]],
+    target_date: date,
+    detail_level: str,
+) -> Tuple[pd.DataFrame, FitbitToken]:
+    token = FitbitToken.from_dict(stored_token) if stored_token else None
+    client = FitbitClient(credentials, token=token)
+
+    if token and token.is_expired:
+        token = client.refresh_access_token()
+
+    intraday = client.get_heart_rate_intraday(datetime.combine(target_date, datetime.min.time()), detail_level)
+    summary = client.get_daily_activity_summary(datetime.combine(target_date, datetime.min.time()))
+    resting_rate = summary.get("summary", {}).get("restingHeartRate")
+
+    df = build_fitbit_dataframe(intraday, client.token.user_id if client.token else "fitbit_user", resting_rate)
+    if df.empty:
+        raise FitbitClientError("No heart rate samples returned for the selected date.")
+
+    return df, client.token
+
+
 def main():
     st.set_page_config(page_title="AI Health Anomaly Detection", layout="wide")
     st.title("🧠 AI-Powered Health Anomaly Detection")
@@ -167,32 +272,134 @@ def main():
         "Simulate wearable telemetry, detect anomalies automatically, and audit model performance."
     )
 
-    st.sidebar.header("⚙️ Configuration")
-    model_choice = st.sidebar.selectbox("Detection model", MODEL_OPTIONS, index=0)
-    num_users = st.sidebar.slider("Number of Users", 1, 10, 3)
-    num_minutes = st.sidebar.slider("Minutes of Data per User", 100, 1000, 300)
-    contamination = st.sidebar.slider("Isolation Forest contamination", 0.01, 0.2, 0.05)
-    simulated_anomaly_ratio = st.sidebar.slider(
-        "Simulated anomaly ratio", min_value=0.01, max_value=0.3, value=0.08, step=0.01
-    )
-    random_seed = st.sidebar.number_input("Random seed", min_value=0, value=42, step=1)
+    if "fitbit_token" not in st.session_state:
+        st.session_state["fitbit_token"] = None
+    if "fitbit_df" not in st.session_state:
+        st.session_state["fitbit_df"] = None
+    if "fitbit_auth_url" not in st.session_state:
+        st.session_state["fitbit_auth_url"] = None
 
-    df = simulate_health_data(
-        num_users=num_users,
-        minutes=num_minutes,
-        anomaly_ratio=simulated_anomaly_ratio,
-        seed=random_seed,
-    )
+    st.sidebar.header("⚙️ Configuration")
+    data_source = st.sidebar.selectbox("Data source", DATA_SOURCE_OPTIONS, index=0)
+    model_choice = st.sidebar.selectbox("Detection model", MODEL_OPTIONS, index=0)
+
+    df = pd.DataFrame()
+
+    if data_source == DATA_SOURCE_SIMULATED:
+        num_users = st.sidebar.slider("Number of Users", 1, 10, 3)
+        num_minutes = st.sidebar.slider("Minutes of Data per User", 100, 1000, 300)
+        contamination = st.sidebar.slider("Isolation Forest contamination", 0.01, 0.2, 0.05)
+        simulated_anomaly_ratio = st.sidebar.slider(
+            "Simulated anomaly ratio", min_value=0.01, max_value=0.3, value=0.08, step=0.01
+        )
+        random_seed = st.sidebar.number_input("Random seed", min_value=0, value=42, step=1)
+
+        df = simulate_health_data(
+            num_users=num_users,
+            minutes=num_minutes,
+            anomaly_ratio=simulated_anomaly_ratio,
+            seed=random_seed,
+        )
+    else:
+        st.sidebar.subheader("Fitbit OAuth")
+        client_id = st.sidebar.text_input("Client ID", value=os.getenv("FITBIT_CLIENT_ID", ""))
+        client_secret = st.sidebar.text_input(
+            "Client Secret", value=os.getenv("FITBIT_CLIENT_SECRET", ""), type="password"
+        )
+        redirect_uri = st.sidebar.text_input(
+            "Redirect URI", value=os.getenv("FITBIT_REDIRECT_URI", "http://localhost:8501")
+        )
+        scope = st.sidebar.text_input("Scope", value="activity heartrate sleep")
+        contamination = st.sidebar.slider("Isolation Forest contamination", 0.01, 0.2, 0.05)
+        random_seed = st.sidebar.number_input("Random seed", min_value=0, value=42, step=1)
+
+        credentials = FitbitCredentials(
+            client_id=client_id,
+            client_secret=client_secret,
+            redirect_uri=redirect_uri,
+            scope=scope,
+        )
+
+        client = FitbitClient(credentials, token=(
+            FitbitToken.from_dict(st.session_state["fitbit_token"])
+            if st.session_state["fitbit_token"]
+            else None
+        ))
+
+        if st.sidebar.button("Generate authorization URL", key="fitbit_auth_link"):
+            auth_url = client.get_authorize_url()
+            st.session_state["fitbit_auth_url"] = auth_url
+
+        if st.session_state.get("fitbit_auth_url"):
+            st.sidebar.markdown(
+                f"[Open Fitbit consent page]({st.session_state['fitbit_auth_url']})"
+            )
+
+        authorization_code = st.sidebar.text_input("Authorization code (paste after consent)")
+        exchange_clicked = st.sidebar.button("Exchange code", key="fitbit_exchange")
+        refresh_clicked = st.sidebar.button("Refresh token", key="fitbit_refresh")
+
+        if exchange_clicked and authorization_code:
+            try:
+                token = client.exchange_code_for_token(authorization_code.strip())
+                st.session_state["fitbit_token"] = token.to_dict()
+                st.sidebar.success("Fitbit access token stored in session.")
+            except FitbitClientError as exc:
+                st.sidebar.error(f"Authorization failed: {exc}")
+        elif exchange_clicked and not authorization_code:
+            st.sidebar.warning("Provide the authorization code obtained after consent.")
+
+        if refresh_clicked:
+            try:
+                token = client.refresh_access_token()
+                st.session_state["fitbit_token"] = token.to_dict()
+                st.sidebar.success("Access token refreshed.")
+            except FitbitClientError as exc:
+                st.sidebar.error(f"Token refresh failed: {exc}")
+
+        st.sidebar.subheader("Data retrieval")
+        data_date = st.sidebar.date_input("Sample date", value=date.today())
+        detail_level = st.sidebar.selectbox("Granularity", ["1sec", "1min", "5min", "15min"], index=1)
+        fetch_clicked = st.sidebar.button("Fetch Fitbit data", key="fitbit_fetch")
+
+        if fetch_clicked:
+            if not st.session_state["fitbit_token"]:
+                st.sidebar.warning("Authenticate with Fitbit before fetching data.")
+            elif not client_id or not client_secret:
+                st.sidebar.warning("Client ID and Client Secret are required.")
+            else:
+                try:
+                    df_fitbit, token = load_fitbit_dataframe(
+                        credentials,
+                        st.session_state["fitbit_token"],
+                        data_date,
+                        detail_level,
+                    )
+                    st.session_state["fitbit_df"] = df_fitbit
+                    st.session_state["fitbit_token"] = token.to_dict()
+                    st.sidebar.success(
+                        f"Retrieved {len(df_fitbit):,} heart rate samples for {data_date}."
+                    )
+                except FitbitClientError as exc:
+                    st.sidebar.error(str(exc))
+                except Exception as exc:  # noqa: BLE001
+                    st.sidebar.error(f"Unexpected error loading Fitbit data: {exc}")
+
+        df = st.session_state.get("fitbit_df")
+
+    if df is None or df.empty:
+        st.info("No data loaded yet. Configure inputs in the sidebar to begin analysis.")
+        return
 
     total_records = len(df)
-    total_anomalies = int(df[ANOMALY_LABEL].sum())
+    total_anomalies = int(df.get(ANOMALY_LABEL, pd.Series(dtype=int)).sum())
     anomaly_rate_display = (
         f"{(total_anomalies / total_records * 100):.2f}%" if total_records else "0%"
     )
 
     overview_col1, overview_col2, overview_col3, overview_col4 = st.columns(4)
-    overview_col1.metric("Users simulated", df["user_id"].nunique())
-    overview_col2.metric("Records generated", f"{total_records:,}")
+    overview_col1.metric("Users observed", df["user_id"].nunique())
+    overview_col2.metric("Records analyzed", f"{total_records:,}")
     overview_col3.metric("Ground-truth anomalies", f"{total_anomalies:,}")
     overview_col4.metric("Anomaly prevalence", anomaly_rate_display)
 
@@ -241,6 +448,7 @@ def main():
         )
         summary_col2.metric("Match rate vs. ground truth", f"{match_rate:.2%}")
         summary_col3.metric("Features used", len(feature_cols))
+        st.markdown(f"**Data source:** {data_source}  ")
         st.markdown(f"**Active model:** {model_choice}")
         st.markdown(
             "Use the tabs to explore raw telemetry, inspect diagnostics, and visualize anomaly timelines. "
@@ -250,7 +458,7 @@ def main():
     with tabs[1]:
         st.subheader("📊 Data Explorer")
         st.caption(
-            "Simulated telemetry with ground-truth anomaly tags and predictions from the selected model."
+            "Telemetry with ground-truth anomaly tags and predictions from the selected model."
         )
         st.dataframe(
             df_processed[
@@ -260,10 +468,12 @@ def main():
                     "heart_rate",
                     "blood_oxygen",
                     "temperature",
+                    "respiration_rate",
+                    "activity_level_label",
                     ANOMALY_LABEL,
                     "prediction_label",
                 ]
-            ].head(300)
+            ].head(500)
         )
 
     with tabs[2]:
@@ -271,7 +481,7 @@ def main():
         st.markdown(f"**Model:** {model_choice}")
         if eval_df is None or cm is None:
             st.info(
-                "Insufficient class diversity to compute evaluation metrics. Try increasing simulation duration or anomaly ratio."
+                "Insufficient class diversity to compute evaluation metrics. Try expanding the dataset or adjusting anomaly thresholds."
             )
         else:
             st.caption(

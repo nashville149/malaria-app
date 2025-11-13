@@ -46,6 +46,31 @@ class FitbitToken:
     def is_expired(self) -> bool:
         return datetime.utcnow() >= self.expires_at
 
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "access_token": self.access_token,
+            "refresh_token": self.refresh_token,
+            "expires_at": self.expires_at.isoformat(),
+            "scope": self.scope,
+            "user_id": self.user_id,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "FitbitToken":
+        expires_at_raw = data.get("expires_at")
+        expires_at = (
+            datetime.fromisoformat(expires_at_raw)
+            if isinstance(expires_at_raw, str)
+            else datetime.utcnow()
+        )
+        return cls(
+            access_token=data["access_token"],
+            refresh_token=data["refresh_token"],
+            expires_at=expires_at,
+            scope=data.get("scope", ""),
+            user_id=data.get("user_id", ""),
+        )
+
     @classmethod
     def from_response(cls, response: Dict[str, Any]) -> "FitbitToken":
         expires_in = response.get("expires_in", 0)
@@ -131,9 +156,19 @@ class FitbitClient:
         )
         payload = self._get(endpoint)
         dataset = payload.get("activities-heart-intraday", {}).get("dataset", [])
+        parsed_dataset: List[Dict[str, Any]] = []
         for item in dataset:
-            item["datetime"] = datetime.combine(date.date(), datetime.strptime(item["time"], "%H:%M:%S").time())
-        return dataset
+            try:
+                time_component = datetime.strptime(item["time"], "%H:%M:%S").time()
+            except ValueError:
+                time_component = datetime.strptime(item["time"], "%H:%M").time()
+            parsed_dataset.append(
+                {
+                    **item,
+                    "datetime": datetime.combine(date.date(), time_component),
+                }
+            )
+        return parsed_dataset
 
     def get_daily_activity_summary(self, date: datetime) -> Dict[str, Any]:
         endpoint = f"/1/user/-/activities/date/{date.strftime('%Y-%m-%d')}.json"
