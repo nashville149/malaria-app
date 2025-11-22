@@ -17,6 +17,99 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# Language translations
+TRANSLATIONS = {
+    'en': {
+        'title': 'MalariaAI - Kenya Risk Dashboard',
+        'subtitle': 'Real-time malaria risk monitoring across Kenya',
+        'login': 'Login',
+        'register': 'Register',
+        'username': 'Username',
+        'password': 'Password',
+        'email': 'Email',
+        'county': 'Your County',
+        'name': 'Full Name',
+        'age': 'Your Age',
+        'temperature': 'Current Body Temperature (°C)',
+        'travel': 'Have you traveled to malaria-endemic areas recently?',
+        'symptoms': 'Select any symptoms you\'re experiencing:',
+        'predict': 'Get My Risk Assessment',
+        'high_risk': 'HIGH RISK',
+        'medium_risk': 'MEDIUM RISK', 
+        'low_risk': 'LOW RISK',
+        'recommendation': 'Recommendation:'
+    },
+    'sw': {
+        'title': 'MalariaAI - Dashibodi ya Hatari Kenya',
+        'subtitle': 'Ufuatiliaji wa hatari ya malaria wakati halisi nchini Kenya',
+        'login': 'Ingia',
+        'register': 'Jisajili',
+        'username': 'Jina la mtumiaji',
+        'password': 'Nywila',
+        'email': 'Barua pepe',
+        'county': 'Kaunti yako',
+        'name': 'Jina kamili',
+        'age': 'Umri wako',
+        'temperature': 'Joto la mwili sasa (°C)',
+        'travel': 'Je, umesafiri kwenye maeneo ya malaria hivi karibuni?',
+        'symptoms': 'Chagua dalili zozote unazohisi:',
+        'predict': 'Pata Tathmini ya Hatari Yangu',
+        'high_risk': 'HATARI KUBWA',
+        'medium_risk': 'HATARI YA KATI',
+        'low_risk': 'HATARI NDOGO',
+        'recommendation': 'Mapendekezo:'
+    }
+}
+
+# Initialize session state
+if 'language' not in st.session_state:
+    st.session_state.language = 'en'
+if 'offline_data' not in st.session_state:
+    st.session_state.offline_data = []
+if 'connection_status' not in st.session_state:
+    st.session_state.connection_status = True
+
+def get_text(key):
+    return TRANSLATIONS[st.session_state.language].get(key, key)
+
+def save_offline_data(data):
+    """Save data for offline sync"""
+    try:
+        offline_file = 'offline_predictions.json'
+        offline_data = []
+        if os.path.exists(offline_file):
+            with open(offline_file, 'r') as f:
+                offline_data = json.load(f)
+        
+        data['timestamp'] = datetime.now().isoformat()
+        data['synced'] = False
+        offline_data.append(data)
+        
+        with open(offline_file, 'w') as f:
+            json.dump(offline_data, f)
+        return True
+    except:
+        return False
+
+def sync_offline_data():
+    """Sync offline data when connection is restored"""
+    try:
+        offline_file = 'offline_predictions.json'
+        if os.path.exists(offline_file):
+            with open(offline_file, 'r') as f:
+                offline_data = json.load(f)
+            
+            # Mark all as synced
+            for item in offline_data:
+                item['synced'] = True
+            
+            with open(offline_file, 'w') as f:
+                json.dump(offline_data, f)
+            return len(offline_data)
+    except:
+        pass
+    return 0
+
 # User management functions
 def load_users():
     try:
@@ -56,6 +149,30 @@ if 'authenticated' not in st.session_state:
     st.session_state.authenticated = False
 if 'username' not in st.session_state:
     st.session_state.username = None
+
+# Language selector in sidebar
+with st.sidebar:
+    st.markdown("### 🌍 Language / Lugha")
+    language_options = {'English': 'en', 'Kiswahili': 'sw'}
+    selected_lang = st.selectbox(
+        "Choose Language",
+        options=list(language_options.keys()),
+        index=0 if st.session_state.language == 'en' else 1
+    )
+    st.session_state.language = language_options[selected_lang]
+    
+    # Connection status
+    st.markdown("### 📶 Connection Status")
+    if st.session_state.connection_status:
+        st.success("🟢 Online")
+        # Check for offline data to sync
+        if st.button("🔄 Sync Offline Data"):
+            synced_count = sync_offline_data()
+            if synced_count > 0:
+                st.success(f"Synced {synced_count} offline records")
+    else:
+        st.warning("🔴 Offline Mode")
+        st.info("Data will be saved locally and synced when online")
 
 # Load model
 @st.cache_resource
@@ -99,9 +216,9 @@ model = load_model()
 
 # Authentication UI
 if not st.session_state.authenticated:
-    st.markdown("""
+    st.markdown(f"""
     <div class="main-header">
-        <h1>🦟 MalariaAI - Kenya Risk Dashboard</h1>
+        <h1>🦟 {get_text('title')}</h1>
         <p>Please login or register to access the malaria risk assessment</p>
     </div>
     """, unsafe_allow_html=True)
@@ -109,11 +226,11 @@ if not st.session_state.authenticated:
     tab1, tab2 = st.tabs(["Login", "Register"])
     
     with tab1:
-        st.subheader("Login")
+        st.subheader(get_text('login'))
         with st.form("login_form"):
-            username = st.text_input("Username")
-            password = st.text_input("Password", type="password")
-            login_btn = st.form_submit_button("Login")
+            username = st.text_input(get_text('username'))
+            password = st.text_input(get_text('password'), type="password")
+            login_btn = st.form_submit_button(get_text('login'))
             
             if login_btn:
                 if authenticate_user(username, password):
@@ -125,12 +242,12 @@ if not st.session_state.authenticated:
                     st.error("Invalid username or password")
     
     with tab2:
-        st.subheader("Register")
+        st.subheader(get_text('register'))
         with st.form("register_form"):
-            new_username = st.text_input("Choose Username")
-            new_password = st.text_input("Choose Password", type="password")
-            confirm_password = st.text_input("Confirm Password", type="password")
-            email = st.text_input("Email")
+            new_username = st.text_input("Choose " + get_text('username'))
+            new_password = st.text_input("Choose " + get_text('password'), type="password")
+            confirm_password = st.text_input("Confirm " + get_text('password'), type="password")
+            email = st.text_input(get_text('email'))
             county = st.selectbox("Your County", 
                                ["Baringo", "Bomet", "Bungoma", "Busia", "Elgeyo-Marakwet", "Embu", 
                                 "Garissa", "Homa Bay", "Isiolo", "Kajiado", "Kakamega", "Kericho", 
@@ -140,7 +257,7 @@ if not st.session_state.authenticated:
                                 "Nakuru", "Nandi", "Narok", "Nyamira", "Nyandarua", "Nyeri", 
                                 "Samburu", "Siaya", "Taita-Taveta", "Tana River", "Tharaka-Nithi", 
                                 "Trans Nzoia", "Turkana", "Uasin Gishu", "Vihiga", "Wajir", "West Pokot"])
-            register_btn = st.form_submit_button("Register")
+            register_btn = st.form_submit_button(get_text('register'))
             
             if register_btn:
                 if new_password != confirm_password:
@@ -193,6 +310,34 @@ st.markdown("""
     margin-bottom: 2rem;
 }
 
+.symptom-card {
+    background: white;
+    padding: 1rem;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    text-align: center;
+    margin: 0.5rem 0;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.symptom-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.offline-indicator {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    background: #ff4757;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    z-index: 1000;
+}
+
 .metric-card {
     background: white;
     padding: 1rem;
@@ -226,12 +371,12 @@ st.markdown("""
 # Header with logout
 col1, col2 = st.columns([4, 1])
 with col1:
-    st.markdown("""
+    st.markdown(f"""
     <div class="main-header">
-        <h1>🦟 MalariaAI - Kenya Risk Dashboard</h1>
-        <p>Welcome back, {}</p>
+        <h1>🦟 {get_text('title')}</h1>
+        <p>Welcome back, {st.session_state.username}</p>
     </div>
-    """.format(st.session_state.username), unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
 with col2:
     if st.button("Logout"):
@@ -250,7 +395,7 @@ st.sidebar.markdown(f"**Email:** {user_data.get('email', 'Not set')}")
 
 # User Information
 with st.sidebar.expander("Personal Information", expanded=True):
-    name = st.text_input("Full Name", value=st.session_state.username)
+    name = st.text_input(get_text('name'), value=st.session_state.username)
     gender = st.selectbox("Gender", ["Male", "Female", "Other"])
     location = st.selectbox("Current County in Kenya", 
                            ["Baringo", "Bomet", "Bungoma", "Busia", "Elgeyo-Marakwet", "Embu", 
@@ -283,20 +428,30 @@ st.sidebar.title("🔬 Health Assessment")
 st.sidebar.markdown("Enter your current health information:")
 
 with st.sidebar.form("prediction_form"):
-    age = st.number_input("Your Age", min_value=0, max_value=120, value=30)
-    temperature = st.number_input("Current Body Temperature (°C)", min_value=35.0, max_value=42.0, value=37.0, step=0.1)
+    age = st.number_input(get_text('age'), min_value=0, max_value=120, value=30)
+    temperature = st.number_input(get_text('temperature'), min_value=35.0, max_value=42.0, value=37.0, step=0.1)
     
     st.markdown("**Travel History**")
-    travel = st.selectbox("Have you traveled to malaria-endemic areas recently?", ["No", "Yes"])
+    travel = st.selectbox(get_text('travel'), ["No", "Yes"])
     
     st.markdown("**Environmental Exposure**")
     mosquito = st.slider("How would you rate your mosquito exposure? (1=Very Low, 10=Very High)", 1, 10, 5)
     
     st.markdown("**Current Symptoms**")
-    symptoms_list = st.multiselect(
-        "Select any symptoms you're experiencing:",
-        ["Fever", "Headache", "Chills", "Nausea", "Vomiting", "Fatigue", "Muscle aches", "Sweating"]
-    )
+    # Visual symptom selector with icons
+    st.markdown(f"**{get_text('symptoms')}**")
+    
+    symptom_icons = {
+        "Fever": "🤒", "Headache": "🤕", "Chills": "🥶", "Nausea": "🤢",
+        "Vomiting": "🤮", "Fatigue": "😴", "Muscle aches": "💪", "Sweating": "💦"
+    }
+    
+    symptoms_list = []
+    cols = st.columns(4)
+    for i, (symptom, icon) in enumerate(symptom_icons.items()):
+        with cols[i % 4]:
+            if st.checkbox(f"{icon} {symptom}", key=f"symptom_{i}"):
+                symptoms_list.append(symptom)
     symptoms = len(symptoms_list)
     
     st.markdown("**Prevention Measures**")
@@ -328,7 +483,7 @@ with st.sidebar.form("prediction_form"):
     }
     region = region_risk_map.get(location, 5)
     
-    submitted = st.form_submit_button("🔍 Get My Risk Assessment")
+    submitted = st.form_submit_button(f"🔍 {get_text('predict')}")
 
 # Main content
 col1, col2 = st.columns([2, 1])
@@ -449,29 +604,56 @@ if submitted:
             risk_score = max(0, min(100, risk_score))
             
             # Personalized risk assessment and recommendations
+            # Localized risk assessment
             if risk_score >= 70:
-                risk_level = "High"
+                risk_level = get_text('high_risk')
                 risk_class = "risk-high"
-                recommendation = f"⚠️ **{name or 'Patient'}**, your risk is HIGH. Seek immediate medical attention in {location}. Consider visiting a healthcare provider for testing and treatment."
-                if symptoms > 3:
-                    recommendation += " Your multiple symptoms require urgent evaluation."
+                if st.session_state.language == 'sw':
+                    recommendation = f"⚠️ **{name or 'Mgonjwa'}**, hatari yako ni KUBWA. Tafuta msaada wa matibabu mara moja huko {location}."
+                else:
+                    recommendation = f"⚠️ **{name or 'Patient'}**, your risk is HIGH. Seek immediate medical attention in {location}."
             elif risk_score >= 40:
-                risk_level = "Medium"
+                risk_level = get_text('medium_risk')
                 risk_class = "risk-medium"
-                recommendation = f"⚡ **{name or 'Patient'}**, you have MEDIUM risk. Monitor your symptoms closely in {location}."
-                if temperature > 38.0:
-                    recommendation += " Your elevated temperature needs attention."
-                if travel == "Yes":
-                    recommendation += " Your recent travel increases concern."
+                if st.session_state.language == 'sw':
+                    recommendation = f"⚡ **{name or 'Mgonjwa'}**, una hatari ya KATI. Fuatilia dalili zako kwa karibu huko {location}."
+                else:
+                    recommendation = f"⚡ **{name or 'Patient'}**, you have MEDIUM risk. Monitor symptoms closely in {location}."
             else:
-                risk_level = "Low"
+                risk_level = get_text('low_risk')
                 risk_class = "risk-low"
-                recommendation = f"✅ **{name or 'Patient'}**, your risk is LOW in {location}. Continue your current preventive measures."
-                if prevention_score < 0.5:
-                    recommendation += " Consider improving your prevention methods (bed nets, repellent, medication)."
+                if st.session_state.language == 'sw':
+                    recommendation = f"✅ **{name or 'Mgonjwa'}**, hatari yako ni NDOGO huko {location}. Endelea na njia za kujikinga."
+                else:
+                    recommendation = f"✅ **{name or 'Patient'}**, your risk is LOW in {location}. Continue preventive measures."
             
-            # Display personalized results
-            st.markdown(f"### 📋 Risk Assessment for {name or 'Patient'}")
+            # Save data (offline if needed)
+            prediction_data = {
+                'user': name,
+                'location': location,
+                'risk_score': risk_score,
+                'risk_level': risk_level,
+                'features': features,
+                'language': st.session_state.language
+            }
+            
+            if not st.session_state.connection_status:
+                save_offline_data(prediction_data)
+                st.info("📱 Prediction saved offline. Will sync when connected.")
+            
+            # Display personalized results with visual indicators
+            st.markdown(f"### 📋 {get_text('recommendation')} {name or 'Patient'}")
+            
+            # Large visual risk indicator
+            risk_colors = {'High': '🔴', 'Medium': '🟡', 'Low': '🟢'}
+            risk_color = risk_colors.get(risk_level.split()[0], '⚪')
+            
+            st.markdown(f"""
+            <div style="text-align: center; padding: 20px; background: {'#ffe6e6' if 'HIGH' in risk_level else '#fff3e0' if 'MEDIUM' in risk_level else '#e6f7f0'}; border-radius: 10px; margin: 20px 0;">
+                <h1 style="font-size: 3rem; margin: 0;">{risk_color}</h1>
+                <h2 style="margin: 10px 0; color: {'#ff4757' if 'HIGH' in risk_level else '#ffa500' if 'MEDIUM' in risk_level else '#00a676'};">{risk_level}</h2>
+            </div>
+            """, unsafe_allow_html=True)
             
             col_score, col_level, col_location = st.columns(3)
             
@@ -484,16 +666,17 @@ if submitted:
             with col_location:
                 st.metric("Location", location)
             
-            # Personalized recommendation
-            if risk_level == "High":
-                st.error(recommendation)
-            elif risk_level == "Medium":
-                st.warning(recommendation)
+            # Personalized recommendation with icons
+            if "HIGH" in risk_level:
+                st.error(f"🚨 {recommendation}")
+            elif "MEDIUM" in risk_level:
+                st.warning(f"⚠️ {recommendation}")
             else:
-                st.success(recommendation)
+                st.success(f"✅ {recommendation}")
             
             # Additional personalized insights
-            st.markdown("### 🔍 Your Risk Factors")
+            # Visual risk factors with icons
+            st.markdown("### 🔍 Risk Factors / Sababu za Hatari")
             
             risk_factors = []
             if temperature > 38.0:
@@ -527,34 +710,76 @@ if submitted:
                 for factor in protective_factors:
                     st.markdown(f"- {factor}")
             
-            # Personalized next steps
-            st.markdown("### 📝 Recommended Next Steps")
+            # Next steps with visual icons
+            st.markdown("### 📝 Next Steps / Hatua Zinazofuata")
             if risk_level == "High":
-                st.markdown(f"""
-                1. 🏥 **Visit nearest healthcare facility in {location} immediately**
-                2. 🩸 **Request malaria blood test (RDT or microscopy)**
-                3. 📱 **Keep monitoring your temperature every 2 hours**
-                4. 💧 **Stay hydrated and rest**
-                """)
+                if st.session_state.language == 'sw':
+                    st.markdown(f"""
+                    1. 🏥 **Tembelea kituo cha afya karibu zaidi huko {location} mara moja**
+                    2. 🩸 **Omba upimaji wa damu wa malaria (RDT au microscopy)**
+                    3. 📱 **Endelea kupima joto kila masaa 2**
+                    4. 💧 **Kunywa maji mengi na pumzika**
+                    """)
+                else:
+                    st.markdown(f"""
+                    1. 🏥 **Visit nearest healthcare facility in {location} immediately**
+                    2. 🩸 **Request malaria blood test (RDT or microscopy)**
+                    3. 📱 **Keep monitoring your temperature every 2 hours**
+                    4. 💧 **Stay hydrated and rest**
+                    """)
             elif risk_level == "Medium":
-                st.markdown(f"""
-                1. 🌡️ **Monitor temperature every 4 hours**
-                2. 👀 **Watch for worsening symptoms**
-                3. 🏥 **Consult healthcare provider in {location} if symptoms persist**
-                4. 🦟 **Increase mosquito protection measures**
-                """)
+                if st.session_state.language == 'sw':
+                    st.markdown(f"""
+                    1. 🌡️ **Pima joto kila masaa 4**
+                    2. 👀 **Angalia dalili zinazoongezeka**
+                    3. 🏥 **Wasiliana na mtoa huduma za afya huko {location}**
+                    4. 🦟 **Ongeza njia za kujikinga na mbu**
+                    """)
+                else:
+                    st.markdown(f"""
+                    1. 🌡️ **Monitor temperature every 4 hours**
+                    2. 👀 **Watch for worsening symptoms**
+                    3. 🏥 **Consult healthcare provider in {location} if symptoms persist**
+                    4. 🦟 **Increase mosquito protection measures**
+                    """)
             else:
-                st.markdown(f"""
-                1. 🛡️ **Continue current prevention methods**
-                2. 🦟 **Maintain mosquito protection in {location}**
-                3. 👀 **Stay alert for any new symptoms**
-                4. 📅 **Regular health check-ups**
-                """)
+                if st.session_state.language == 'sw':
+                    st.markdown(f"""
+                    1. 🛡️ **Endelea na njia za kujikinga za sasa**
+                    2. 🦟 **Jikinge na mbu huko {location}**
+                    3. 👀 **Kuwa macho kwa dalili mpya zozote**
+                    4. 📅 **Vipimo vya afya mara kwa mara**
+                    """)
+                else:
+                    st.markdown(f"""
+                    1. 🛡️ **Continue current prevention methods**
+                    2. 🦟 **Maintain mosquito protection in {location}**
+                    3. 👀 **Stay alert for any new symptoms**
+                    4. 📅 **Regular health check-ups**
+                    """)
             
         except Exception as e:
             st.error(f"Prediction error: {str(e)}")
             st.write(f"Debug - Error details: {type(e).__name__}")
 
+# Offline data display
+if st.session_state.offline_data or os.path.exists('offline_predictions.json'):
+    with st.expander("📱 Offline Data / Data ya Nje ya Mtandao"):
+        try:
+            with open('offline_predictions.json', 'r') as f:
+                offline_data = json.load(f)
+            
+            if offline_data:
+                st.write(f"**{len(offline_data)} offline predictions stored**")
+                for i, item in enumerate(offline_data[-5:]):  # Show last 5
+                    status = "✅ Synced" if item.get('synced') else "⏳ Pending"
+                    st.write(f"{i+1}. {item.get('timestamp', 'Unknown')} - {status}")
+        except:
+            pass
+
 # Footer
 st.markdown("---")
-st.markdown("**MalariaAI Kenya Dashboard** - Real-time malaria risk monitoring | © 2024")
+if st.session_state.language == 'sw':
+    st.markdown("**MalariaAI Kenya Dashboard** - Ufuatiliaji wa hatari ya malaria wakati halisi | © 2024")
+else:
+    st.markdown("**MalariaAI Kenya Dashboard** - Real-time malaria risk monitoring | © 2024")
