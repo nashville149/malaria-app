@@ -1,0 +1,260 @@
+{
+  "nats": [
+    {
+      "timestamp": "2025-11-22T11:49:50.469195",
+      "location": {
+        "lat": -9.362352822055593,
+        "lon": 28.300781250000004
+      },
+      "features": {
+        "rainfall_12mo": 0,
+        "temp_mean": 15.93,
+        "ndvi_mean": 0,
+        "pop_density": 0,
+        "elevation": 0,
+        "water_coverage": 0
+      },
+      "prediction": "High",
+      "risk_level": "High",
+      "confidence": 0.79
+    },
+    {
+      "timestamp": "2025-11-22T11:49:51.179938",
+      "location": {
+        "lat": -9.362352822055593,
+        "lon": 28.300781250000004
+      },
+      "features": {
+        "rainfall_12mo": 0,
+        "temp_mean": 15.93,
+        "ndvi_mean": 0,
+        "pop_density": 0,
+        "elevation": 0,
+        "water_coverage": 0
+      },
+      "prediction": "High",
+      "risk_level": "High",
+      "confidence": 0.79
+    },
+    {
+      "timestamp": "2025-11-22T11:59:58.432161",
+      "location": "Personal Entry",
+      "features": {
+        "age": 30,
+        "body_temp": 37.0,
+        "recent_travel": "No",
+        "mosquito_exposure": "Low",
+        "symptoms": 0,
+        "preventive_medication": "No",
+        "region_risk": "Low",
+        "immune_status": "No Previous Exposure"
+      },
+      "prediction": "High",
+      "risk_level": "High",
+      "confidence": 1.0
+    },
+    {
+      "timestamp": "2025-11-22T12:02:03.253153",
+      "location": "Personal Entry",
+      "features": {
+        "age": 30,
+        "body_temp": 37.0,
+        "recent_travel": "No",
+        "mosquito_exposure": "Low",
+        "symptoms": 0,
+        "preventive_medication": "No",
+        "region_risk": "Low",
+        "immune_status": "No Previous Exposure"
+      },
+      "prediction": "High",
+      "risk_level": "High",
+      "confidence": 1.0
+    },
+    {
+      "timestamp": "2025-11-22T12:02:26.570297",
+      "location": {
+        "lat": -0.8788717828324148,
+        "lon": 36.65039062500001
+      },
+      "features": {
+        "rainfall_12mo": 211.81,
+        "temp_mean": 21.03,
+        "env_temp_mean": 21.03,
+        "ndvi_mean": 0.06,
+        "pop_density": 0,
+        "elevation": 0,
+        "water_coverage": 0
+      },
+      "prediction": "High",
+      "risk_level": "High",
+      "confidence": 0.99
+    },
+    {
+      "timestamp": "2025-11-22T12:03:18.596265",
+      "location": {
+        "lat": -0.8349313860427057,
+        "lon": 37.26562500000001
+      },
+      "features": {
+        "rainfall_12mo": 403.66,
+        "temp_mean": 21.09,
+        "env_temp_mean": 21.09,
+        "ndvi_mean": 0.27,
+        "pop_density": 0,
+        "elevation": 0,
+        "water_coverage": 23.03
+      },
+      "prediction": "High",
+      "risk_level": "High",
+      "confidence": 1.0
+    },
+    {
+      "timestamp": "2025-11-22T12:03:43.446663",
+      "location": {
+        "lat": -2.064982495867104,
+        "lon": 37.39746093750001
+      },
+      "features": {
+        "rainfall_12mo": 37.86,
+        "temp_mean": 16.26,
+        "env_temp_mean": 16.26,
+        "ndvi_mean": 0.21,
+        "pop_density": 0,
+        "elevation": 0,
+        "water_coverage": 0
+      },
+      "prediction": "High",
+      "risk_level": "High",
+      "confidence": 1.0
+    },
+    {
+      "timestamp": "2025-11-22T12:04:16.391938",
+      "location": {
+        "lat": -0.15380840901698828,
+        "lon": 34.59594726562501
+      },
+      "features": {
+        "rainfall_12mo": 69.18,
+        "temp_mean": 16.28,
+        "env_temp_mean": 16.28,
+        "ndvi_mean": 0.22,
+        "pop_density": 0,
+        "elevation": 167.84,
+        "water_coverage": 17.64
+      },
+      "prediction": "High",
+      "risk_level": "High",
+      "confidence": 1.0
+    },
+    {
+      "timestamp": "2025-11-22T12:04:20.161918",
+      "location": {
+        "lat": -0.15380840901698828,
+        "lon": 34.59594726562501
+      },
+      "features": {
+        "rainfall_12mo": 69.18,
+        "temp_mean": 16.28,
+        "env_temp_mean": 16.28,
+        "ndvi_mean": 0.22,
+        "pop_density": 0,
+        "elevation": 167.84,
+        "water_coverage": 17.64
+      },
+      "prediction": "High",
+      "risk_level": "High",
+      "confidence": 1.0
+    },
+    {
+      "timestamp": "2025-11-22T12:09:03.021870",
+      "location": "Personal Entry",
+      "features": {
+        "age": 30,
+        "body_temp": 37.0,
+        "recent_travel": "No",
+        "mosquito_exposure": "Low",
+        "symptoms": 0,
+        "preventive_medication": "No",
+        "region_risk": "Low",
+        "immune_status": "No Previous Exposure"
+      },
+      "prediction": "High",
+      "risk_level": "High",
+      "confidence": 1.0
+    },
+    {
+      "timestamp": "2025-11-22T12:09:51.732517",
+      "location": {
+        "lat": 0.4394488164139768,
+        "lon": 37.08984375000001
+      },
+      "features": {
+        "rainfall_12mo": 308.65,
+        "temp_mean": 20.76,
+        "env_temp_mean": 20.76,
+        "ndvi_mean": 0.26,
+        "pop_density": 0,
+        "elevation": 0,
+        "water_coverage": 0.67
+      },
+      "prediction": "High",
+      "risk_level": "High",
+      "confidence": 1.0
+    },
+    {
+      "timestamp": "2025-11-22T12:15:40.697938",
+      "location": {
+        "lat": 0.08789059053082422,
+        "lon": 36.56250000000001
+      },
+      "features": {
+        "rainfall_12mo": 492.45,
+        "temp_mean": 17.13,
+        "env_temp_mean": 17.13,
+        "ndvi_mean": 0.08,
+        "pop_density": 0,
+        "elevation": 225.95,
+        "water_coverage": 0
+      },
+      "prediction": "High",
+      "risk_level": "High",
+      "confidence": 1.0
+    },
+    {
+      "timestamp": "2025-11-22T12:16:10.102424",
+      "location": {
+        "lat": -1.252341676699616,
+        "lon": 39.64965820312501
+      },
+      "features": {
+        "rainfall_12mo": 457.39,
+        "temp_mean": 19.11,
+        "env_temp_mean": 19.11,
+        "ndvi_mean": 0.08,
+        "pop_density": 0,
+        "elevation": 0,
+        "water_coverage": 18.61
+      },
+      "prediction": "High",
+      "risk_level": "High",
+      "confidence": 1.0
+    },
+    {
+      "timestamp": "2025-11-22T14:44:00.628283",
+      "location": "Personal Entry",
+      "features": {
+        "age": 30,
+        "body_temp": 37.0,
+        "recent_travel": "No",
+        "mosquito_exposure": "Low",
+        "symptoms": 0,
+        "preventive_medication": "No",
+        "region_risk": "Low",
+        "immune_status": "No Previous Exposure"
+      },
+      "prediction": "High",
+      "risk_level": "High",
+      "confidence": 1.0
+    }
+  ]
+}
