@@ -11,6 +11,7 @@ ENV/
 # Application specific
 users.json
 malaria_model.pkl
+prediction_history.json
 *.pkl
 
 # IDE
