@@ -1,6 +1,6 @@
 # Azure Deployment Guide
 
-This guide outlines how to deploy the AI Health Anomaly Detection Streamlit app to Azure using a container image.
+This guide outlines how to deploy the Malaria Risk Predictor Streamlit app to Azure using a container image.
 
 ## Prerequisites
 
@@ -12,13 +12,13 @@ This guide outlines how to deploy the AI Health Anomaly Detection Streamlit app 
 ## 1. Build the Container Image
 
 ```bash
-docker build -t health-anomaly-app:latest .
+docker build -t malaria-risk-predictor:latest .
 ```
 
 ## 2. Test the Container Locally
 
 ```bash
-docker run --rm -p 8501:8501 health-anomaly-app:latest
+docker run --rm -p 8501:8501 malaria-risk-predictor:latest
 ```
 
 Visit `http://localhost:8501` to confirm the app is running.
@@ -41,8 +41,8 @@ Visit `http://localhost:8501` to confirm the app is running.
 
    ```bash
    az acr login --name sdgaicr
-   docker tag health-anomaly-app:latest sdgaicr.azurecr.io/health-anomaly-app:latest
-   docker push sdgaicr.azurecr.io/health-anomaly-app:latest
+   docker tag malaria-risk-predictor:latest sdgaicr.azurecr.io/malaria-risk-predictor:latest
+   docker push sdgaicr.azurecr.io/malaria-risk-predictor:latest
    ```
 
 ## 4. Deploy to Azure App Service
@@ -63,17 +63,17 @@ Visit `http://localhost:8501` to confirm the app is running.
    az webapp create \
      --resource-group sdg-ai-rg \
      --plan sdg-ai-plan \
-     --name sdg-ai-health-app \
-     --deployment-container-image-name sdgaicr.azurecr.io/health-anomaly-app:latest
+     --name malaria-risk-predictor-app \
+     --deployment-container-image-name sdgaicr.azurecr.io/malaria-risk-predictor:latest
    ```
 
 3. Configure container credentials:
 
    ```bash
    az webapp config container set \
-     --name sdg-ai-health-app \
+     --name malaria-risk-predictor-app \
      --resource-group sdg-ai-rg \
-     --docker-custom-image-name sdgaicr.azurecr.io/health-anomaly-app:latest \
+     --docker-custom-image-name sdgaicr.azurecr.io/malaria-risk-predictor:latest \
      --docker-registry-server-url https://sdgaicr.azurecr.io \
      --docker-registry-server-user $(az acr credential show --name sdgaicr --query username -o tsv) \
      --docker-registry-server-password $(az acr credential show --name sdgaicr --query passwords[0].value -o tsv)
@@ -83,7 +83,7 @@ Visit `http://localhost:8501` to confirm the app is running.
 
    ```bash
    az webapp config appsettings set \
-     --name sdg-ai-health-app \
+     --name malaria-risk-predictor-app \
      --resource-group sdg-ai-rg \
      --settings WEBSITES_PORT=8501
    ```
@@ -91,7 +91,7 @@ Visit `http://localhost:8501` to confirm the app is running.
 5. Restart the app to apply settings:
 
    ```bash
-   az webapp restart --name sdg-ai-health-app --resource-group sdg-ai-rg
+   az webapp restart --name malaria-risk-predictor-app --resource-group sdg-ai-rg
    ```
 
 ## 5. Monitor and Scale
