@@ -1,14 +1,14 @@
-# Malaria Risk Predictor
+# MalariaAI - Kenya Risk Dashboard
 
-A web application for predicting malaria risk based on patient information, travel history, symptoms, and environmental factors.
+A Streamlit web application for predicting malaria risk with focus on Kenya, featuring an interactive map and real-time risk monitoring.
 
 ## Features
 
-- **User Authentication**: Secure login and registration system
-- **Risk Prediction**: AI-powered malaria risk assessment using machine learning
-- **Comprehensive Input**: Collects age, temperature, travel history, mosquito exposure, symptoms, medication status, region risk, and immune status
-- **Risk Classification**: Provides High, Medium, or Low risk predictions with probability scores
-- **Recommendations**: Actionable recommendations based on risk level
+- **Kenya-Focused Map**: Interactive map showing malaria risk zones across Kenya
+- **AI Risk Prediction**: Machine learning-powered malaria risk assessment
+- **Real-time Monitoring**: Live climate data and case statistics
+- **Risk Alerts**: Active alerts for high-risk areas
+- **Clean Interface**: No charts, focused on map visualization
 
 ## Installation
 
@@ -19,58 +19,46 @@ pip install -r requirements.txt
 
 2. Run the application:
 ```bash
-streamlit run index.py
+streamlit run streamlit_app.py
 ```
 
 3. Open your browser and navigate to `http://localhost:8501`
 
 ## Usage
 
-1. **Register/Login**: Create a new account or login with existing credentials
-2. **Enter Patient Information**: Fill in the required fields:
-   - Age
-   - Body Temperature
-   - Recent Travel to Malaria-Endemic Areas
-   - Mosquito Exposure Level
-   - Number of Symptoms
-   - Preventive Medication Status
-   - Current Region Risk Level
-   - Immune Status
-3. **Get Prediction**: Click "Predict Malaria Risk" to get the risk assessment
-4. **Review Recommendations**: Follow the recommendations based on your risk level
+1. **View Kenya Map**: Interactive map showing risk zones in major Kenyan cities
+2. **Enter Patient Data**: Use sidebar form to input health information
+3. **Get Risk Assessment**: Receive instant risk prediction with recommendations
+4. **Monitor Alerts**: View active alerts for different regions
+
+## Kenya Cities Covered
+
+- **Nairobi**: High risk - 156 cases
+- **Mombasa**: Medium risk - 89 cases
+- **Eldoret**: High risk - 67 cases
+- **Kisumu**: Medium risk - 45 cases
+- **Meru**: Low risk - 23 cases
+- **Malindi**: High risk - 78 cases
 
 ## Model Details
 
-The application uses a Random Forest Classifier trained on synthetic data that considers:
-- Patient demographics (age)
-- Clinical symptoms (temperature, symptom count)
-- Travel history
-- Environmental factors (mosquito exposure, region risk)
-- Preventive measures (medication, immune status)
+Random Forest Classifier considering:
+- Patient demographics and symptoms
+- Environmental factors
+- Travel history and preventive measures
 
 ## File Structure
 
 ```
 Medical_app/
-├── index.py              # Main application file
-├── requirements.txt      # Python dependencies
-├── users.json           # User database (created automatically)
-├── malaria_model.pkl    # Trained model (created automatically)
-├── Dockerfile           # Docker configuration
-└── deployment/          # Deployment documentation
+├── streamlit_app.py     # Main Streamlit application
+├── requirements.txt     # Python dependencies
+├── malaria_model.pkl   # ML model (auto-generated)
+├── users.json         # User data (auto-generated)
+└── README.md          # Documentation
 ```
-
-## Security Notes
-
-- Passwords are hashed using SHA256
-- User data is stored locally in JSON format
-- For production use, consider implementing a proper database and stronger encryption
-
-## Deployment
-
-See `deployment/azure/README.md` for Azure deployment instructions.
 
 ## License
 
-This project is for educational and research purposes.
+Educational and research purposes.
 
